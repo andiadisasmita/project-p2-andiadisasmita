@@ -10,6 +10,30 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// GetPayments godoc
+// @Summary Retrieve payments for the logged-in user
+// @Description Returns a list of payments made by the logged-in user
+// @Tags payments
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.Payment
+// @Failure 401 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /payments [get]
+
+// CreatePayment godoc
+// @Summary Create a payment
+// @Description Records a payment for a rental
+// @Tags payments
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param payment body models.CreatePaymentRequest true "Payment details"
+// @Success 201 {object} models.Payment
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /payments [post]
+
 // GetPayments retrieves all payments for the logged-in user
 func GetPayments(c echo.Context) error {
 	userID, err := utils.GetUserIDFromContext(c)

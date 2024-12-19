@@ -7,9 +7,9 @@ import (
 	"github.com/a-andiadisasmita/project-p2-andiadisasmita/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
-// SetupRoutes initializes all routes
 func SetupRoutes(e *echo.Echo) {
 	// Middleware
 	e.Use(middleware.Logger())
@@ -21,12 +21,18 @@ func SetupRoutes(e *echo.Echo) {
 	// Public routes
 	e.POST("/users/register", controllers.RegisterUser)
 	e.POST("/users/login", controllers.LoginUser)
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
+
+	// JWT Middleware Configuration
+	jwtConfig := middleware.JWTConfig{
+		SigningKey:  []byte(os.Getenv("JWT_SECRET")),
+		TokenLookup: "header:Authorization",
+		AuthScheme:  "Bearer",
+	}
 
 	// Protected routes
 	r := e.Group("")
-	r.Use(middleware.JWTWithConfig(middleware.JWTConfig{
-		SigningKey: []byte(os.Getenv("JWT_SECRET")),
-	}))
+	r.Use(middleware.JWTWithConfig(jwtConfig))
 
 	// Protected routes for rentals, payments, reviews, etc.
 	r.GET("/boardgames", controllers.GetBoardgames)

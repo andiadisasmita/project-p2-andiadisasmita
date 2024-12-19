@@ -23,8 +23,6 @@ func SetupRoutes(e *echo.Echo) {
 
 	// Protected routes
 	r := e.Group("") // Create a protected route group
-
-	// CustomJWTMiddleware
 	r.Use(utils.CustomJWTMiddleware)
 
 	// Protected routes for rentals, payments, reviews, etc.
@@ -34,8 +32,10 @@ func SetupRoutes(e *echo.Echo) {
 	r.POST("/rentals", controllers.CreateRental)
 	r.PUT("/rentals/:id", controllers.UpdateRental)
 	r.GET("/rentals/history", controllers.GetRentalHistory)
-	r.GET("/payments", controllers.GetPayments)
-	r.POST("/payments", controllers.CreatePayment)
 	r.GET("/reviews/:boardgame_id", controllers.GetReviews)
 	r.POST("/reviews", controllers.CreateReview)
+
+	// New payment routes
+	r.POST("/payments/invoice", controllers.CreateInvoice)
+	r.GET("/payments/status/:invoice_id", controllers.CheckInvoice)
 }

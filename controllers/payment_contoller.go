@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/a-andiadisasmita/project-p2-andiadisasmita/config"
@@ -20,21 +21,6 @@ import (
 // @Failure 401 {object} utils.ErrorResponse
 // @Failure 500 {object} utils.ErrorResponse
 // @Router /payments [get]
-
-// CreatePayment godoc
-// @Summary Create a payment
-// @Description Records a payment for a rental
-// @Tags payments
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param payment body models.CreatePaymentRequest true "Payment details"
-// @Success 201 {object} models.Payment
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
-// @Router /payments [post]
-
-// GetPayments retrieves all payments for the logged-in user
 func GetPayments(c echo.Context) error {
 	userID, err := utils.GetUserIDFromContext(c)
 	if err != nil {
@@ -51,7 +37,18 @@ func GetPayments(c echo.Context) error {
 	return c.JSON(http.StatusOK, payments)
 }
 
-// CreatePayment creates a new payment for a rental
+// CreatePayment godoc
+// @Summary Create a payment
+// @Description Records a payment for a rental
+// @Tags payments
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param payment body models.CreatePaymentRequest true "Payment details"
+// @Success 201 {object} models.Payment
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /payments [post]
 func CreatePayment(c echo.Context) error {
 	var input struct {
 		RentalID uint    `json:"rental_id" validate:"required"`
@@ -72,4 +69,68 @@ func CreatePayment(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, payment)
+}
+
+// CreateInvoice godoc
+// @Summary Create an invoice
+// @Description Generates an invoice for payment using Xendit
+// @Tags payments
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param invoice body models.CreateInvoiceRequest true "Invoice details"
+// @Success 201 {object} map[string]string
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /payments/invoice [post]
+func CreateInvoice(c echo.Context) error {
+	type InvoiceRequest struct {
+		RentalID    uint    `json:"rental_id"`
+		Amount      float64 `json:"amount"`
+		Description string  `json:"description"`
+	}
+
+	req := new(InvoiceRequest)
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, utils.NewErrorResponse("Invalid request payload", err.Error()))
+	}
+
+	invoiceURL, err := utils.CreateInvoice(req.RentalID, req.Amount, req.Description, os.Getenv("SUCCESS_REDIRECT_URL"))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.NewErrorResponse("Failed to create invoice", err.Error()))
+	}
+
+	return c.JSON(http.StatusCreated, map[string]string{
+		"message":     "Invoice created successfully",
+		"invoice_url": invoiceURL,
+	})
+}
+
+// CheckInvoice godoc
+// @Summary Check the status of an invoice
+// @Description Fetch the current status of an invoice using the invoice ID
+// @Tags payments
+// @Produce json
+// @Security BearerAuth
+// @Param invoice_id path string true "Invoice ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 404 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /payments/status/{invoice_id} [get]
+func CheckInvoice(c echo.Context) error {
+	invoiceID := c.Param("invoice_id")
+	if invoiceID == "" {
+		return c.JSON(http.StatusBadRequest, utils.NewErrorResponse("Invalid Invoice ID", "Invoice ID is required"))
+	}
+
+	status, err := utils.CheckInvoiceStatus(invoiceID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.NewErrorResponse("Failed to retrieve invoice status", err.Error()))
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"invoice_id": invoiceID,
+		"status":     status,
+	})
 }

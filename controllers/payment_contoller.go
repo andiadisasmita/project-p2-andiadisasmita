@@ -72,16 +72,15 @@ func CreatePayment(c echo.Context) error {
 }
 
 // CreateInvoice godoc
-// @Summary Create an invoice
-// @Description Generates an invoice for payment using Xendit
+// @Summary Create a payment invoice
+// @Description Generates a payment invoice for a rental using the Xendit API.
 // @Tags payments
 // @Accept json
 // @Produce json
-// @Security BearerAuth
-// @Param invoice body models.CreateInvoiceRequest true "Invoice details"
-// @Success 201 {object} map[string]string
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
+// @Param invoice body struct{RentalID uint; Amount float64; Description string} true "Invoice details"
+// @Success 201 {object} map[string]string "Invoice URL and success message"
+// @Failure 400 {object} utils.ErrorResponse "Invalid input"
+// @Failure 500 {object} utils.ErrorResponse "Internal server error"
 // @Router /payments/invoice [post]
 func CreateInvoice(c echo.Context) error {
 	type InvoiceRequest struct {
@@ -100,23 +99,31 @@ func CreateInvoice(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, utils.NewErrorResponse("Failed to create invoice", err.Error()))
 	}
 
+	email := "<USER_EMAIL>" // Retrieve from the user's context or rental details
+	subject := "Payment Confirmation"
+	body := "<h1>Payment Successful</h1><p>Thank you for your payment!</p>"
+
+	if err := utils.SendEmail(email, subject, body); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Failed to send payment confirmation email",
+		})
+	}
+
 	return c.JSON(http.StatusCreated, map[string]string{
-		"message":     "Invoice created successfully",
+		"message":     "Invoice created successfully and payment confirmation email sent",
 		"invoice_url": invoiceURL,
 	})
 }
 
 // CheckInvoice godoc
-// @Summary Check the status of an invoice
-// @Description Fetch the current status of an invoice using the invoice ID
+// @Summary Check payment invoice status
+// @Description Retrieves the status of a payment invoice from the Xendit API.
 // @Tags payments
 // @Produce json
-// @Security BearerAuth
 // @Param invoice_id path string true "Invoice ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 404 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
+// @Success 200 {object} map[string]string "Invoice status"
+// @Failure 404 {object} utils.ErrorResponse "Invoice not found"
+// @Failure 500 {object} utils.ErrorResponse "Internal server error"
 // @Router /payments/status/{invoice_id} [get]
 func CheckInvoice(c echo.Context) error {
 	invoiceID := c.Param("invoice_id")

@@ -11,26 +11,27 @@ import (
 
 // RegisterUser godoc
 // @Summary Register a new user
-// @Description Allows a new user to register by providing email, password, and deposit amount
+// @Description Allows a new user to register by providing email, password, and deposit amount. Sends a welcome email upon successful registration.
 // @Tags users
 // @Accept json
 // @Produce json
 // @Param user body models.User true "User registration details"
 // @Success 201 {object} echo.Map
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 500 {object} utils.ErrorResponse
+// @Failure 400 {object} utils.ErrorResponse "Invalid input"
+// @Failure 500 {object} utils.ErrorResponse "Internal server error"
 // @Router /users/register [post]
 
 // LoginUser godoc
 // @Summary Login a user
-// @Description Authenticates a user and provides a JWT token
+// @Description Authenticates a user and provides a JWT token for further access.
 // @Tags users
 // @Accept json
 // @Produce json
 // @Param login body models.LoginRequest true "Login credentials"
 // @Success 200 {object} echo.Map
-// @Failure 400 {object} utils.ErrorResponse
-// @Failure 401 {object} utils.ErrorResponse
+// @Failure 400 {object} utils.ErrorResponse "Invalid input"
+// @Failure 401 {object} utils.ErrorResponse "Invalid credentials"
+// @Failure 500 {object} utils.ErrorResponse "Internal server error"
 // @Router /users/login [post]
 
 // RegisterUser handles user registration
@@ -52,7 +53,19 @@ func RegisterUser(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, utils.NewErrorResponse("Error creating user", err.Error()))
 	}
 
-	return c.JSON(http.StatusCreated, echo.Map{"message": "User registered successfully"})
+	email := "<USER_EMAIL>" // Extract from request
+	subject := "Welcome to Boardgame Rentals!"
+	body := "<h1>Welcome to Boardgame Rentals</h1><p>We’re glad to have you!</p>"
+
+	if err := utils.SendEmail(email, subject, body); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Failed to send welcome email",
+		})
+	}
+
+	return c.JSON(http.StatusCreated, map[string]string{
+		"message": "User registered successfully and welcome email sent",
+	})
 }
 
 // LoginUser handles user login

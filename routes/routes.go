@@ -1,8 +1,6 @@
 package routes
 
 import (
-	"os"
-
 	"github.com/a-andiadisasmita/project-p2-andiadisasmita/controllers"
 	"github.com/a-andiadisasmita/project-p2-andiadisasmita/utils"
 	"github.com/labstack/echo/v4"
@@ -23,16 +21,11 @@ func SetupRoutes(e *echo.Echo) {
 	e.POST("/users/login", controllers.LoginUser)
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
-	// JWT Middleware Configuration
-	jwtConfig := middleware.JWTConfig{
-		SigningKey:  []byte(os.Getenv("JWT_SECRET")),
-		TokenLookup: "header:Authorization",
-		AuthScheme:  "Bearer",
-	}
-
 	// Protected routes
-	r := e.Group("")
-	r.Use(middleware.JWTWithConfig(jwtConfig))
+	r := e.Group("") // Create a protected route group
+
+	// CustomJWTMiddleware
+	r.Use(utils.CustomJWTMiddleware)
 
 	// Protected routes for rentals, payments, reviews, etc.
 	r.GET("/boardgames", controllers.GetBoardgames)
